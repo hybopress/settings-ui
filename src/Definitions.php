@@ -47,22 +47,63 @@ final class Definitions {
         if ( null === $this->definitions ) {
             $this->definitions = [];
 
-            foreach ( (array) $this->config->get( "{$this->namespace}.controls", [] ) as $key => $declaration ) {
-                if ( ! is_array( $declaration ) ) {
-                    continue;
+            $declared = (array) $this->config->get( "{$this->namespace}.controls", [] );
+
+            foreach ( $declared as $key => $declaration ) {
+                foreach ( $this->expand( (string) $key, $declaration ) as $expanded => $body ) {
+                    $definition = new Definition( (string) $expanded, $body );
+
+                    if ( ! $this->visible( $definition ) ) {
+                        continue;
+                    }
+
+                    $this->definitions[ $expanded ] = $definition;
                 }
-
-                $definition = new Definition( (string) $key, $declaration );
-
-                if ( ! $this->visible( $definition ) ) {
-                    continue;
-                }
-
-                $this->definitions[ $key ] = $definition;
             }
         }
 
         return $this->definitions;
+    }
+
+    /**
+     * One declaration, as the one or many declarations it stands for.
+     *
+     * A declaration may be a closure, so a set of controls can be built from
+     * data that does not exist at config-load time -- roles, post types,
+     * registered sizes. It may return either one declaration or a map of
+     * them, which is what replaces a dedicated "group" control type: a
+     * computed set is still just controls, so storage and sanitizing stay
+     * one key per control.
+     *
+     * Anything else is skipped rather than thrown, because a declaration is
+     * config and one bad entry should not take the whole screen down.
+     *
+     * @param mixed $declaration
+     *
+     * @return array<string, array<string, mixed>>
+     */
+    private function expand( string $key, mixed $declaration ): array {
+        $declaration = value( $declaration );
+
+        if ( ! is_array( $declaration ) || [] === $declaration ) {
+            return [];
+        }
+
+        // A declaration names its own type; a map of them does not.
+        if ( isset( $declaration['type'] ) ) {
+            return [ $key => $declaration ];
+        }
+
+        $expanded = [];
+
+        // Recurses, because a map may hold further maps or closures: one file
+        // per section nests the computed sets a level deeper than the top of
+        // `controls`, and a single-level expansion would drop them silently.
+        foreach ( $declaration as $name => $body ) {
+            $expanded += $this->expand( (string) $name, $body );
+        }
+
+        return $expanded;
     }
 
     /**
