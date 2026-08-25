@@ -90,8 +90,14 @@ final class Panel {
             );
         }
 
+        // Helper text is authored markup, not user input: these three come
+        // from the consumer's own control declarations, which is the same
+        // trust level as the template calling this. wp_kses_post() keeps the
+        // links, <code> samples and emphasis those declarations rely on, and
+        // still strips script. esc_html() would render the markup as visible
+        // literal text instead.
         if ( '' !== $definition->beforeField() ) {
-            $html .= sprintf( '<p class="hbp-before-field">%s</p>', esc_html( $definition->beforeField() ) );
+            $html .= sprintf( '<p class="hbp-before-field">%s</p>', wp_kses_post( $definition->beforeField() ) );
         }
 
         $html .= $field->render(
@@ -101,11 +107,11 @@ final class Panel {
         );
 
         if ( '' !== $definition->afterField() ) {
-            $html .= sprintf( ' <span class="hbp-after-field">%s</span>', esc_html( $definition->afterField() ) );
+            $html .= sprintf( ' <span class="hbp-after-field">%s</span>', wp_kses_post( $definition->afterField() ) );
         }
 
         if ( '' !== $definition->description() ) {
-            $html .= sprintf( '<p class="description">%s</p>', esc_html( $definition->description() ) );
+            $html .= sprintf( '<p class="description">%s</p>', wp_kses_post( $definition->description() ) );
         }
 
         return $this->wrap( $definition, $html );
