@@ -101,11 +101,32 @@ final class Panel {
             $html .= sprintf( '<p class="hbp-before-field">%s</p>', wp_kses_post( $definition->beforeField() ) );
         }
 
-        $html .= $field->render(
+        $control = $field->render(
             $definition,
             $this->name( $definition->key ),
             $this->settings->get( $definition->key )
         );
+
+        // A locked control is shown, not removed -- that is the whole
+        // difference from `hidden`. It has to advertise the value the build
+        // fixes, so a reader can see what they would get by changing build.
+        //
+        // A disabled <fieldset> rather than a `disabled` attribute on the
+        // input: `disabled` is read from the declaration, and a lock belongs
+        // to the preset, so threading it through every field type would mean
+        // every field type learning about locks. The fieldset disables
+        // whatever it contains, including controls made of several inputs.
+        if ( $this->settings->locked( $definition->key ) ) {
+            $reason = $this->settings->lockReason( $definition->key );
+
+            $control = sprintf(
+                '<fieldset disabled class="hbp-locked">%s%s</fieldset>',
+                $control,
+                '' === $reason ? '' : sprintf( '<p class="description hbp-lock-reason">%s</p>', wp_kses_post( $reason ) )
+            );
+        }
+
+        $html .= $control;
 
         if ( '' !== $definition->afterField() ) {
             $html .= sprintf( ' <span class="hbp-after-field">%s</span>', wp_kses_post( $definition->afterField() ) );
@@ -137,6 +158,14 @@ final class Panel {
 
         foreach ( $this->definitions->all() as $key => $definition ) {
             if ( ! array_key_exists( $key, $posted ) ) {
+                continue;
+            }
+
+            // A locked control renders disabled, and a disabled input posts
+            // nothing -- but a crafted request still can. Without this the
+            // lock is only a visual state and the value it fixes can be
+            // written anyway.
+            if ( $this->settings->locked( $key ) ) {
                 continue;
             }
 
