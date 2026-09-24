@@ -3,6 +3,7 @@
 namespace HBP\Settings\Ui;
 
 use HBP\Settings\Features;
+use HBP\Settings\Paths;
 use Hybrid\Contracts\Config\Repository as ConfigRepository;
 use function Hybrid\Tools\value;
 
@@ -20,11 +21,16 @@ final class Definitions {
     /** @var array<int, string>|null */
     private ?array $hidden = null;
 
+    private readonly Paths $paths;
+
     public function __construct(
         private readonly ConfigRepository $config,
         private readonly string $namespace,
-        private readonly Features $features
-    ) {}
+        private readonly Features $features,
+        ?Paths $paths = null
+    ) {
+        $this->paths = $paths ?? new Paths( $namespace );
+    }
 
     public function has( string $key ): bool {
         return isset( $this->all()[ $key ] );
@@ -136,10 +142,10 @@ final class Definitions {
      */
     private function hidden(): array {
         if ( null === $this->hidden ) {
-            $active = $this->config->get( "{$this->namespace}.presets.active" );
+            $active = $this->config->get( $this->paths->get( 'presets' ) . '.active' );
 
             $hidden = is_string( $active ) && '' !== $active
-                ? $this->config->get( "{$this->namespace}.presets.{$active}.hidden", [] )
+                ? $this->config->get( $this->paths->get( 'presets' ) . ".{$active}.hidden", [] )
                 : [];
 
             $this->hidden = array_map( 'strval', (array) $hidden );
@@ -217,7 +223,7 @@ final class Definitions {
      * `<h2>` entirely, so nothing has to hide it afterwards.
      */
     public function sectionLabel( string $section ): string {
-        $label = value( $this->config->get( "{$this->namespace}.sections.{$section}" ) );
+        $label = value( $this->config->get( $this->paths->get( 'sections' ) . ".{$section}" ) );
 
         return is_string( $label ) ? $label : '';
     }
@@ -226,7 +232,7 @@ final class Definitions {
      * A tab's label, from `{namespace}.tabs.{slug}`.
      */
     public function tabLabel( string $tab ): string {
-        return $this->label( "{$this->namespace}.tabs.{$tab}", $tab );
+        return $this->label( $this->paths->get( 'tabs' ) . ".{$tab}", $tab );
     }
 
     private function label( string $path, string $fallback ): string {

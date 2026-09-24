@@ -23,7 +23,7 @@ final class PanelFactory {
 
         return $this->panels[ "{$namespace}|{$option}" ] ??= new Panel(
             $this->settings->make( $namespace, $option ),
-            new Definitions( $this->config, $namespace, $this->settings->features( $namespace ) ),
+            new Definitions( $this->config, $namespace, $this->settings->features( $namespace ), $this->settings->pathsFor( $namespace ) ),
             $this->fields,
             $option
         );
