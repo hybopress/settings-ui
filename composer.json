@@ -20,14 +20,10 @@
     },
     "require": {
         "php": ">=8.2",
-        "hbp/settings": "dev-main as 1.0",
+        "hbp/settings": "^1.0.0-alpha.1",
         "themehybrid/hybrid-contracts": "^2.0",
-        "themehybrid/hybrid-core": "dev-dev as 7.0",
-        "themehybrid/hybrid-tools": "dev-dev as 2.0"
-    },
-    "require-dev": {
-        "alvarodelera/pest-wp-plugin": "^2.0",
-        "pestphp/pest": "^5.0"
+        "themehybrid/hybrid-core": "^7.0",
+        "themehybrid/hybrid-tools": "^2.0"
     },
     "repositories": [
         {
@@ -45,15 +41,7 @@
             "src/functions.php"
         ]
     },
-    "autoload-dev": {
-        "psr-4": {
-            "HBP\\Settings\\Ui\\Tests\\": "tests/"
-        }
-    },
     "config": {
-        "allow-plugins": {
-            "pestphp/pest-plugin": true
-        },
         "sort-packages": true
     },
     "extra": {
@@ -64,6 +52,6 @@
         }
     },
     "scripts": {
-        "test": "pest"
+        "test": "@composer --working-dir=qa test"
     }
 }

@@ -208,10 +208,15 @@ it( 'lets a preset hide an expanded control', function (): void {
 it( 'skips a declaration that is not an array', function ( mixed $declaration ): void {
     expect( definitions( [ 'a' => $declaration ] )->all() )->toBe( [] );
 } )->with( [
-    'scalar'          => 'nope',
-    'closure to junk' => [ static fn(): string => 'nope' ],
-    'empty'           => [ [] ],
+    'scalar' => 'nope',
+    'empty'  => [ [] ],
 ] );
+
+// Not a dataset case: Pest calls a closure it finds in a dataset, so the
+// declaration would never reach the test as a closure.
+it( 'skips a closure declaration that returns a non-array', function (): void {
+    expect( definitions( [ 'a' => static fn(): string => 'nope' ] )->all() )->toBe( [] );
+} );
 
 /**
  * One file per section nests the computed sets a level below the top of

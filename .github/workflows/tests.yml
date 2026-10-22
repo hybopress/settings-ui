@@ -5,7 +5,7 @@ on:
     branches: [ main ]
   pull_request:
   schedule:
-    # Every dependency here is pinned to a dev branch, so upstream can break
+    # Dependencies resolve to caret ranges, so an upstream release can break
     # this repo with no push to it. A weekly run surfaces that drift instead
     # of leaving it to be found by whoever pushes next.
     - cron: '0 6 * * 1'
@@ -19,7 +19,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  test:
+  lint:
     runs-on: ubuntu-latest
 
     strategy:
@@ -28,7 +28,7 @@ jobs:
       matrix:
         php: [ '8.2', '8.3', '8.4' ]
 
-    name: PHP ${{ matrix.php }}
+    name: Lint, PHP ${{ matrix.php }}
 
     steps:
       - uses: actions/checkout@v4
@@ -36,18 +36,34 @@ jobs:
       - uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ matrix.php }}
+          coverage: none
+
+      - name: Install dependencies
+        # Proves the package installs on every PHP version it supports.
+        run: composer update --no-interaction --no-progress --prefer-dist
+
+      - name: Lint
+        run: |
+          find src -name '*.php' -print0 | xargs -0 -n1 -P4 php -l
+
+  test:
+    runs-on: ubuntu-latest
+
+    # Pest 5 needs PHP 8.4, so the suite in qa/ runs on 8.4 only.
+    name: Test, PHP 8.4
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
           # PestWP provisions SQLite rather than MySQL, so no service container.
           extensions: sqlite3, pdo_sqlite, mbstring, dom, curl, zip
           coverage: none
 
       - name: Install dependencies
-        # No --prefer-lowest run: the package pins dev branches, which have no
-        # lowest to resolve to.
-        run: composer update --no-interaction --no-progress --prefer-dist
-
-      - name: Lint
-        run: |
-          find src tests -name '*.php' -print0 | xargs -0 -n1 -P4 php -l
+        run: composer update --working-dir=qa --no-interaction --no-progress --prefer-dist
 
       - name: Test
         run: composer test

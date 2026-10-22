@@ -1,0 +1,45 @@
+{
+	"name": "hbp/settings-ui-qa",
+	"description": "Test suite for hbp/settings-ui. Its own Composer project, so Pest's PHP 8.4 requirement never reaches the package's PHP 8.2 floor.",
+	"type": "project",
+	"license": "GPL-2.0-or-later",
+	"repositories": [
+		{
+			"type": "path",
+			"url": "..",
+			"options": {
+				"symlink": true,
+				"versions": {
+					"hbp/settings-ui": "1.0.x-dev"
+				}
+			}
+		},
+		{
+			"type": "vcs",
+			"url": "https://github.com/hybopress/settings"
+		}
+	],
+	"require-dev": {
+		"alvarodelera/pest-wp-plugin": "^2.0",
+		"hbp/settings": "dev-main as 1.0.0-alpha.1",
+		"hbp/settings-ui": "1.0.x-dev",
+		"pestphp/pest": "^5.0"
+	},
+	"autoload-dev": {
+		"psr-4": {
+			"HBP\\Settings\\Ui\\Tests\\": "tests/"
+		}
+	},
+	"config": {
+		"allow-plugins": {
+			"pestphp/pest-plugin": true
+		},
+		"process-timeout": 0,
+		"sort-packages": true
+	},
+	"minimum-stability": "dev",
+	"prefer-stable": true,
+	"scripts": {
+		"test": "pest"
+	}
+}
