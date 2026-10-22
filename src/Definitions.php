@@ -206,9 +206,20 @@ final class Definitions {
 
     /**
      * A section's heading, from `{namespace}.sections.{slug}`.
+     *
+     * Opt-in, unlike a tab label: an undeclared section has no heading rather
+     * than one derived from its slug. A section is a grouping first and a
+     * heading second, and the common case -- one section per tab -- would
+     * otherwise print a heading repeating the tab the reader just clicked, or
+     * the word "Default" for a section that was never named at all.
+     *
+     * An empty title is also what tells do_settings_sections() to skip the
+     * `<h2>` entirely, so nothing has to hide it afterwards.
      */
     public function sectionLabel( string $section ): string {
-        return $this->label( "{$this->namespace}.sections.{$section}", $section );
+        $label = value( $this->config->get( "{$this->namespace}.sections.{$section}" ) );
+
+        return is_string( $label ) ? $label : '';
     }
 
     /**

@@ -94,6 +94,14 @@ it( 'reads a section label from config', function (): void {
         ->toBe( 'Identity' );
 } );
 
+it( 'gives an undeclared section no heading', function (): void {
+    expect( definitions( [], [] )->sectionLabel( 'identity' ) )->toBe( '' );
+} );
+
+it( 'still derives a tab label from its slug', function (): void {
+    expect( definitions( [], [] )->tabLabel( 'admin_bar' ) )->toBe( 'Admin Bar' );
+} );
+
 it( 'lists the control types on a tab', function (): void {
     $definitions = definitions( [
         'a' => [
