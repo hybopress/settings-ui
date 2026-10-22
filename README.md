@@ -49,8 +49,12 @@ Every key may be a closure, resolved on read, so a declaration can call
 `esc_html__()` or build choices from data that does not exist at config-load
 time.
 
-Closures resolve at the **leaf** only. The declaration array itself must be an
-array — a closure returning one is skipped, silently.
+Closures resolve at the **leaf** only, with one exception: a *declaration
+itself* may be a closure. See "Computed controls" below.
+
+A declaration that resolves to something other than an array of declarations
+is skipped rather than thrown — a declaration is config, and one typo should
+not take the whole screen down.
 
 | Key | Default | Meaning |
 |---|---|---|
@@ -62,16 +66,84 @@ array — a closure returning one is skipped, silently.
 | `priority` | `10` | Sort order. A section sorts by its earliest control. |
 | `feature` | `''` | Capability gating visibility. Declared, never inferred. |
 | `choices` | `[]` | For select/radio/multicheckbox/radio_image/sortable. |
+| `before_field` | `''` | Text rendered above the control. |
+| `after_field` | `''` | Text inline after the input, before the description. |
+| `container-class` | derived | Class on the control's **row**. Defaults to one derived from the key. |
+| `events` | `[]` | Client-side show/hide rules. See below. |
+| `content` | `''` | For `html` only: the markup to render. |
 
 Common attribute keys pass through to the rendered input: `class`,
 `placeholder`, `required`, `disabled`, `readonly`, plus per-type extras
 (`min`/`max`/`step` on number, `rows`/`cols`/`maxlength` on textarea,
 `maxlength`/`minlength`/`pattern`/`size` on text).
 
+### Computed controls
+
+A declaration may be a closure returning either one declaration or a **map**
+of them, so a set of controls can be built from data that does not exist at
+config-load time:
+
+```php
+'roles' => static fn(): array => array_map(
+    static fn( $role ): array => [ 'type' => 'checkbox', 'section' => 'roles' ],
+    get_editable_roles()
+),
+```
+
+The returned keys become the setting keys. There is deliberately no "group"
+control type: a computed set is still just controls, so storage, sanitizing
+and visibility stay one key per control rather than one control owning many.
+
+### Dependent controls
+
+`events` states, per value of this control, what to show and hide:
+
+```php
+'backend.disable_self_ping' => [
+    'type'   => 'checkbox',
+    'events' => [
+        'true'  => [ 'show' => 'backend.self_ping_urls' ],
+        'false' => [ 'hide' => 'backend.self_ping_urls' ],
+    ],
+],
+'backend.self_ping_urls'    => [
+    'type' => 'textarea',
+],
+```
+
+**Targets are control keys, not selectors.** Every control's row carries a
+class derived from its key — `backend.self_ping_urls` becomes
+`hbp-control-backend-self-ping-urls` — and an event target is resolved through
+the same derivation. So the class a control carries and the selector a rule
+points at come from one place and cannot drift apart. Previously these were
+two hand-written strings that had to match, and a typo failed silently: the
+rule rendered and simply never fired.
+
+A target that already looks like a selector — it starts with `.` or `#` — is
+passed through untouched, so a rule can still point at markup this package did
+not render. `container-class` likewise still overrides the derived class, for
+adopting a screen whose classes are already spoken for.
+
+The rules ride as JSON on `data-hbp-events` on a wrapper around the control.
+**This package ships no script** — it states the rule and leaves acting on it
+to the consumer, so nothing here has to know what your script is called or
+when it loads.
+
 ### Control types
 
 `text`, `url`, `email`, `textarea`, `number`, `checkbox`, `toggle`, `select`,
-`radio`, `multicheckbox`, `radio_image`, `media`, `sortable`.
+`radio`, `multicheckbox`, `radio_image`, `media`, `sortable`, `multiselect`,
+`html`.
+
+`multiselect` is its own type rather than a flag on `select`, because the two
+differ in what they post when empty — a single select always posts, a multiple
+posts no key at all — and `emptyValue()` is handed no declaration to branch on.
+
+`html` is markup that sits on the screen without being a setting — a warning
+above a dangerous toggle. It reads nothing and stores nothing: its `sanitize()`
+always rejects, so a crafted submission carrying its key cannot write through
+it. Its `content` is trusted config, not user input, so it is **not** escaped;
+escaping anything interpolated into it is the declaration's job.
 
 `media` stores an attachment ID, not a URL, so the value survives a domain
 change. `sortable` stores an ordered array of the enabled choices, so which
@@ -93,7 +165,10 @@ A control is hidden for two independent reasons:
 
 - its `feature` is disabled for this build — otherwise a preset that disables a
   capability still renders settings that cannot affect anything;
-- the active preset lists its key under `{namespace}.presets.{active}.hidden`.
+- the active preset lists its key under `{namespace}.presets.{active}.hidden`,
+  where `{active}` is whatever `{namespace}.presets.active` names. If that key
+  is absent or not a non-empty string no preset is active, and nothing is
+  hidden — silently.
 
 Hidden controls are dropped before render, so a section or tab whose every
 control is hidden disappears with them rather than printing an empty heading.

@@ -62,7 +62,10 @@ final class Panel {
                     fn() => print ( $this->control( $definition ) ),
                     $page,
                     $section,
-                    [ 'label_for' => $this->name( $key ) ]
+                    array_filter( [
+                        'label_for' => $this->name( $key ),
+                        'class'     => $definition->containerClass(),
+                    ] )
                 );
             }
         }
@@ -87,17 +90,25 @@ final class Panel {
             );
         }
 
+        if ( '' !== $definition->beforeField() ) {
+            $html .= sprintf( '<p class="hbp-before-field">%s</p>', esc_html( $definition->beforeField() ) );
+        }
+
         $html .= $field->render(
             $definition,
             $this->name( $definition->key ),
             $this->settings->get( $definition->key )
         );
 
+        if ( '' !== $definition->afterField() ) {
+            $html .= sprintf( ' <span class="hbp-after-field">%s</span>', esc_html( $definition->afterField() ) );
+        }
+
         if ( '' !== $definition->description() ) {
             $html .= sprintf( '<p class="description">%s</p>', esc_html( $definition->description() ) );
         }
 
-        return $html;
+        return $this->wrap( $definition, $html );
     }
 
     /**
@@ -131,6 +142,74 @@ final class Panel {
         }
 
         return $stored;
+    }
+
+    /**
+     * Wrap a control in its event rules, when it declares any.
+     *
+     * The rules ride as JSON on a data attribute rather than as generated
+     * inline script, so nothing here has to know what the consumer's script
+     * is called or when it loads.
+     */
+    private function wrap( Definition $definition, string $html ): string {
+        $events = $definition->events();
+
+        if ( [] === $events ) {
+            return $html;
+        }
+
+        $json = wp_json_encode( $this->resolve( $events ) );
+
+        if ( false === $json ) {
+            return $html;
+        }
+
+        return sprintf(
+            '<span class="hbp-control" data-hbp-events="%s">%s</span>',
+            esc_attr( $json ),
+            $html
+        );
+    }
+
+    /**
+     * Rewrite every event target from a control key to that control's class.
+     *
+     * A target already written as a selector is left alone, so a rule can
+     * still point at markup this package did not render.
+     *
+     * @param array<array-key, mixed> $events
+     *
+     * @return array<array-key, mixed>
+     */
+    private function resolve( array $events ): array {
+        foreach ( $events as $value => $rules ) {
+            if ( ! is_array( $rules ) ) {
+                continue;
+            }
+
+            foreach ( $rules as $action => $targets ) {
+                $events[ $value ][ $action ] = is_array( $targets )
+                    ? array_map( [ $this, 'selector' ], $targets )
+                    : $this->selector( $targets );
+            }
+        }
+
+        return $events;
+    }
+
+    /**
+     * One event target as a CSS selector.
+     *
+     * @param mixed $target
+     */
+    private function selector( $target ): string {
+        $target = (string) $target;
+
+        if ( str_starts_with( $target, '.' ) || str_starts_with( $target, '#' ) ) {
+            return $target;
+        }
+
+        return '.' . Definition::classFor( $target );
     }
 
     /**

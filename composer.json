@@ -32,7 +32,7 @@
     "repositories": [
         {
             "type": "vcs",
-            "url": "https://github.com/saas786/hbp-settings"
+            "url": "https://github.com/hybopress/settings"
         }
     ],
     "minimum-stability": "dev",

@@ -57,6 +57,67 @@ final class Definition {
     }
 
     /**
+     * Text rendered above the control.
+     */
+    public function beforeField(): string {
+        return (string) $this->get( 'before_field', '' );
+    }
+
+    /**
+     * Text rendered immediately after the control, before the description.
+     *
+     * Distinct from description on purpose: this sits inline with the input
+     * (a checkbox's trailing sentence), the description sits under it.
+     */
+    public function afterField(): string {
+        return (string) $this->get( 'after_field', '' );
+    }
+
+    /**
+     * Class placed on the control's row, not on the input.
+     *
+     * This is the handle a dependent control is shown and hidden by, so it
+     * has to land on the wrapper rather than the field itself.
+     */
+    /**
+     * The row class a control key is addressed by.
+     *
+     * Derived rather than declared, so the class on the row and the selector
+     * an event points at come from one place and cannot drift apart.
+     */
+    public static function classFor( string $key ): string {
+        return 'hbp-control-' . str_replace( [ '.', '_' ], '-', $key );
+    }
+
+    public function containerClass(): string {
+        $declared = (string) $this->get( 'container-class', $this->get( 'container_class', '' ) );
+
+        return '' !== $declared ? $declared : self::classFor( $this->key );
+    }
+
+    /**
+     * Client-side show/hide rules, keyed by this control's value.
+     *
+     *     'events' => [
+     *         'true'  => [ 'show' => 'backend.self_ping_urls' ],
+     *         'false' => [ 'hide' => 'backend.self_ping_urls' ],
+     *     ]
+     *
+     * Targets are control keys. Panel resolves each to the class that control
+     * actually carries, so the two sides cannot drift. A target that already
+     * looks like a selector -- it starts with `.` or `#` -- is passed through
+     * untouched, for pointing at markup this package did not render.
+     *
+     * Emitted as a data attribute for a script to act on. This package ships
+     * no script: it states the rule, the consumer honours it.
+     *
+     * @return array<array-key, mixed>
+     */
+    public function events(): array {
+        return (array) $this->get( 'events', [] );
+    }
+
+    /**
      * The capability this control belongs to, or an empty string for none.
      *
      * Declared, not inferred. The alternative -- guessing the capability from

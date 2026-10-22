@@ -20,6 +20,8 @@ it( 'knows every built-in type', function ( string $type ): void {
     'radio_image',
     'media',
     'sortable',
+    'multiselect',
+    'html',
 ] );
 
 it( 'rejects an unknown type', function (): void {
@@ -283,3 +285,25 @@ it( 'declares an empty value for controls that post nothing when empty', functio
 it( 'declares no empty value for controls that always post', function ( string $type ): void {
     expect( ( new Fields )->get( $type )->emptyValue() )->toBeNull();
 } )->with( [ 'text', 'textarea', 'number', 'select' ] );
+
+/**
+ * A class shipped in Fields/ but left out of the registry is unreachable with
+ * no error anywhere -- the declaration just throws "Unknown control type" at
+ * render time, far from the omission that caused it.
+ */
+it( 'registers every field class the package ships', function (): void {
+    $shipped = array_diff(
+        array_map(
+            static fn( string $file ): string => basename( $file, '.php' ),
+            glob( __DIR__ . '/../../src/Fields/*.php' ) ?: []
+        ),
+        [ 'AbstractField' ]
+    );
+
+    $registered = array_map(
+        static fn( string $type ): string => ( new ReflectionClass( ( new Fields )->get( $type ) ) )->getShortName(),
+        [ 'text', 'url', 'email', 'textarea', 'number', 'checkbox', 'toggle', 'select', 'multiselect', 'radio', 'multicheckbox', 'radio_image', 'media', 'sortable', 'html' ]
+    );
+
+    expect( array_values( array_diff( $shipped, $registered ) ) )->toBe( [] );
+} );

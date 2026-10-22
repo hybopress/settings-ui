@@ -23,6 +23,8 @@ final class Fields {
         'radio_image'   => Fields\RadioImage::class,
         'media'         => Fields\Media::class,
         'sortable'      => Fields\Sortable::class,
+        'multiselect'   => Fields\Multiselect::class,
+        'html'          => Fields\Html::class,
     ];
 
     /** @var array<string, \HBP\Settings\Ui\Contracts\Field> */

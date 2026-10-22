@@ -138,3 +138,145 @@ it( 'survives a non-array submission', function (): void {
 it( 'accepts a value at the edge of its declared range', function (): void {
     expect( panel( panelControls() )->sanitize( [ 'per_page' => 50 ] ) )->toBe( [ 'per_page' => 50 ] );
 } );
+
+it( 'renders after_field text inline with the control', function (): void {
+    $html = panel( [
+        'flag' => [
+            'type'        => 'checkbox',
+            'after_field' => 'Trailing note',
+        ],
+    ] )
+        ->control( definition( [
+            'type'        => 'checkbox',
+            'after_field' => 'Trailing note',
+        ], 'flag' ) );
+
+    expect( $html )->toContain( 'hbp-after-field' )->toContain( 'Trailing note' );
+} );
+
+it( 'escapes after_field text', function (): void {
+    $html = panel( [ 'flag' => [ 'type' => 'text' ] ] )
+        ->control( definition( [
+            'type'        => 'text',
+            'after_field' => '<script>x</script>',
+        ], 'flag' ) );
+
+    expect( $html )->not->toContain( '<script>' );
+} );
+
+it( 'wraps a control declaring events and carries the rules as data', function (): void {
+    $html = panel( [ 'flag' => [ 'type' => 'checkbox' ] ] )->control( definition( [
+        'type'   => 'checkbox',
+        'events' => [ 'true' => [ 'show' => '.dependent-wrap' ] ],
+    ], 'flag' ) );
+
+    expect( $html )
+        ->toContain( 'data-hbp-events' )
+        ->toContain( 'dependent-wrap' );
+} );
+
+it( 'leaves a control with no events unwrapped', function (): void {
+    $html = panel( [ 'flag' => [ 'type' => 'checkbox' ] ] )
+        ->control( definition( [ 'type' => 'checkbox' ], 'flag' ) );
+
+    expect( $html )->not->toContain( 'data-hbp-events' );
+} );
+
+/**
+ * An html control is markup, not a setting. A crafted post carrying its key
+ * must not write through it.
+ */
+it( 'never stores through an html control', function (): void {
+    update_option( TEST_OPTION, [ 'notice' => 'original' ] );
+
+    $stored = panel( [
+        'notice' => [
+            'type'    => 'html',
+            'content' => '<p>Careful.</p>',
+        ],
+    ] )
+        ->sanitize( [ 'notice' => 'injected' ] );
+
+    expect( $stored['notice'] )->toBe( 'original' );
+} );
+
+it( 'emits no companion input for an html control', function (): void {
+    $html = panel( [
+        'notice' => [
+            'type'    => 'html',
+            'content' => '<p>Careful.</p>',
+        ],
+    ] )
+        ->control( definition( [
+            'type'    => 'html',
+            'content' => '<p>Careful.</p>',
+        ], 'notice' ) );
+
+    expect( $html )->not->toContain( 'type="hidden"' )->toContain( '<p>Careful.</p>' );
+} );
+
+it( 'resolves html content declared as a closure', function (): void {
+    $html = panel( [ 'notice' => [ 'type' => 'html' ] ] )->control( definition( [
+        'type'    => 'html',
+        'content' => static fn(): string => '<p>Lazy.</p>',
+    ], 'notice' ) );
+
+    expect( $html )->toContain( '<p>Lazy.</p>' );
+} );
+
+/**
+ * The class on a control's row and the selector an event points at used to be
+ * two hand-written strings that had to match. Nothing enforced it, and a typo
+ * failed silently -- the rule simply never fired.
+ *
+ * Both now derive from the control key, so this asserts the property itself:
+ * the selector an event resolves to IS the class the target control carries.
+ */
+it( 'resolves an event target to the class its control actually carries', function (): void {
+    $target = definition( [ 'type' => 'textarea' ], 'backend.self_ping_urls' );
+
+    $html = panel( [ 'backend.flag' => [ 'type' => 'checkbox' ] ] )->control( definition( [
+        'type'   => 'checkbox',
+        'events' => [ 'true' => [ 'show' => 'backend.self_ping_urls' ] ],
+    ], 'backend.flag' ) );
+
+    expect( $html )->toContain( '.' . $target->containerClass() );
+} );
+
+it( 'derives a row class from the control key', function (): void {
+    expect( definition( [ 'type' => 'text' ], 'backend.self_ping_urls' )->containerClass() )
+        ->toBe( 'hbp-control-backend-self-ping-urls' );
+} );
+
+it( 'lets a declared container-class win over the derived one', function (): void {
+    expect( definition( [
+        'type'            => 'text',
+        'container-class' => 'legacy-wrap',
+    ], 'x' )->containerClass() )
+        ->toBe( 'legacy-wrap' );
+} );
+
+it( 'resolves a list of event targets', function (): void {
+    $html = panel( [ 'flag' => [ 'type' => 'checkbox' ] ] )->control( definition( [
+        'type'   => 'checkbox',
+        'events' => [ 'all' => [ 'hide' => [ 'a.b', 'c.d' ] ] ],
+    ], 'flag' ) );
+
+    expect( $html )->toContain( 'hbp-control-a-b' )->toContain( 'hbp-control-c-d' );
+} );
+
+/**
+ * A rule may still point at markup this package did not render, so anything
+ * already written as a selector is passed through untouched.
+ */
+it( 'passes a raw selector through untouched', function ( string $selector ): void {
+    $html = panel( [ 'flag' => [ 'type' => 'checkbox' ] ] )->control( definition( [
+        'type'   => 'checkbox',
+        'events' => [ 'true' => [ 'show' => $selector ] ],
+    ], 'flag' ) );
+
+    expect( $html )->toContain( $selector )->not->toContain( 'hbp-control-' );
+} )->with( [
+    'class' => '.legacy-wrap',
+    'id'    => '#thing',
+] );
