@@ -6,7 +6,9 @@ The admin field and settings-page layer for
 `hbp/settings` resolves a value. This package renders the control that edits
 it, and drives the WordPress Settings API around it.
 
-Requires PHP 8.2+, `hbp/settings`, `themehybrid/hybrid-core` ^7.0.
+Requires PHP 8.2+, `hbp/settings` ^1.0.0-alpha.1, `themehybrid/hybrid-core`
+^7.0 and `themehybrid/hybrid-tools` ^2.0. The `Loader` shown below ships with
+hybrid-tools 2.0.6.
 
 ## The consumer loads the config
 
@@ -197,6 +199,18 @@ and the sanitize callback.
 those filters chain: with one registration per tab, only the first callback
 would see the real submission and every later one would be handed the previous
 callback's merged array and treat it as posted input.
+
+The registered callback only treats this option's own form post as input.
+WordPress runs it on every `update_option()` for the option, so a write from
+code (`Settings::set()`, a migration) passes through untouched instead of
+being reduced to the stored value.
+
+`options.php` lets only `manage_options` users save unless told otherwise.
+A screen shown under another capability passes the same one:
+
+```php
+add_action( 'admin_init', static fn() => $panel->registerSetting( 'edit_theme_options' ) );
+```
 
 ### Saving
 
