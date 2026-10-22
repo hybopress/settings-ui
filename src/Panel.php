@@ -44,12 +44,19 @@ final class Panel {
 
     /**
      * Register the option. Call once, on admin_init.
+     *
+     * @param string $capability Who may save the form. options.php checks
+     *                           manage_options unless told otherwise, so a
+     *                           screen shown under another capability must
+     *                           pass the same one here.
      */
-    public function registerSetting(): void {
+    public function registerSetting( string $capability = 'manage_options' ): void {
         register_setting( $this->option, $this->option, [
             'sanitize_callback' => [ $this, 'sanitizeSubmission' ],
             'type'              => 'array',
         ] );
+
+        add_filter( "option_page_capability_{$this->option}", static fn(): string => $capability );
     }
 
     /**

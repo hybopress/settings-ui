@@ -356,3 +356,17 @@ it( 'still sanitizes the settings form submission', function (): void {
         unregister_setting( TEST_OPTION, TEST_OPTION );
     }
 } );
+
+it( 'lets the form save under the capability the screen is shown with', function (): void {
+    $panel  = panel( [ 'site.title' => [ 'type' => 'text' ] ] );
+    $filter = 'option_page_capability_' . TEST_OPTION;
+
+    $panel->registerSetting( 'edit_theme_options' );
+
+    try {
+        expect( apply_filters( $filter, 'manage_options' ) )->toBe( 'edit_theme_options' );
+    } finally {
+        remove_all_filters( $filter );
+        unregister_setting( TEST_OPTION, TEST_OPTION );
+    }
+} );
