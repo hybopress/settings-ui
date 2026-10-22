@@ -51,6 +51,35 @@ it( 'renders a control with its description', function (): void {
         ->toContain( 'Shown in the browser tab.' );
 } );
 
+it( 'keeps authored markup in helper text', function (): void {
+    $panel = panel( [
+        'site_title' => [
+            'type'         => 'text',
+            'before_field' => '<strong>Careful.</strong>',
+            'after_field'  => '<code>&lt;title&gt;</code>',
+            'description'  => 'See <a href="https://example.com">the docs</a>.',
+        ],
+    ] );
+
+    expect( $panel->control( $panel->definitions()->get( 'site_title' ) ) )
+        ->toContain( '<strong>Careful.</strong>' )
+        ->toContain( '<code>&lt;title&gt;</code>' )
+        ->toContain( '<a href="https://example.com">the docs</a>' );
+} );
+
+it( 'strips script from helper text', function (): void {
+    $panel = panel( [
+        'site_title' => [
+            'type'        => 'text',
+            'description' => 'Safe<script>alert(1)</script>',
+        ],
+    ] );
+
+    expect( $panel->control( $panel->definitions()->get( 'site_title' ) ) )
+        ->toContain( 'Safe' )
+        ->not->toContain( '<script>' );
+} );
+
 /**
  * An unchecked box posts no key at all, which is indistinguishable from a
  * key absent because it lives on another tab. A companion hidden input
