@@ -74,12 +74,6 @@ final class Definition {
     }
 
     /**
-     * Class placed on the control's row, not on the input.
-     *
-     * This is the handle a dependent control is shown and hidden by, so it
-     * has to land on the wrapper rather than the field itself.
-     */
-    /**
      * The row class a control key is addressed by.
      *
      * Derived rather than declared, so the class on the row and the selector
@@ -89,6 +83,12 @@ final class Definition {
         return 'hbp-control-' . str_replace( [ '.', '_' ], '-', $key );
     }
 
+    /**
+     * Class placed on the control's row, not on the input.
+     *
+     * This is the handle a dependent control is shown and hidden by, so it
+     * has to land on the wrapper rather than the field itself.
+     */
     public function containerClass(): string {
         $declared = (string) $this->get( 'container-class', $this->get( 'container_class', '' ) );
 
@@ -144,7 +144,8 @@ final class Definition {
      * Whether a posted value is one of the offered choices.
      */
     public function allows( mixed $value ): bool {
-        return array_key_exists( (string) $value, $this->choices() );
+        // A crafted post can send an array where one value belongs.
+        return is_scalar( $value ) && array_key_exists( (string) $value, $this->choices() );
     }
 
     /**

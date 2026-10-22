@@ -307,3 +307,17 @@ it( 'registers every field class the package ships', function (): void {
 
     expect( array_values( array_diff( $shipped, $registered ) ) )->toBe( [] );
 } );
+
+it( 'leaves radio_image alt text empty, since the label is printed beside it', function (): void {
+    $html = render( [
+        'type'    => 'radio_image',
+        'choices' => [ 'wide' => [ 'label' => 'Wide', 'url' => 'https://example.com/wide.png' ] ],
+    ], 'wide', 'opt[layout]' );
+
+    expect( $html )->toContain( 'alt=""' )
+        ->and( $html )->not->toContain( 'alt="opt[layout]"' );
+} );
+
+it( 'rejects an array posted to a single-choice control', function ( string $type ): void {
+    expect( sanitize( [ 'type' => $type, 'choices' => [ 'a' => 'A' ] ], [ 'a' ] ) )->toBeNull();
+} )->with( [ 'select', 'radio', 'radio_image' ] );

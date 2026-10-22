@@ -23,7 +23,7 @@ final class RadioImage extends AbstractField {
 
             $html .= sprintf(
                 '<label><input type="radio" name="%s" value="%s"%s class="screen-reader-text">'
-                . '<img src="%s" alt="%1$s"><span>%5$s</span></label>',
+                . '<img src="%s" alt=""><span>%5$s</span></label>',
                 esc_attr( $name ),
                 esc_attr( (string) $choice ),
                 checked( (string) $choice, (string) $value, false ),
