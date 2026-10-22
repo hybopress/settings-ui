@@ -3,6 +3,7 @@
 namespace HBP\Settings\Ui;
 
 use HBP\Settings\Settings;
+use Hybrid\Tools\Arr;
 
 /**
  * Drives the WordPress Settings API for one namespace.
@@ -142,8 +143,14 @@ final class Panel {
             $clean = $this->fields->get( $definition->type() )->sanitize( $definition, $posted[ $key ] );
 
             // null means the control rejected the value; leave the stored one.
+            //
+            // Arr::set, not $stored[ $key ], because a control key is dotted
+            // and the store is nested. Assigning it flat would write a
+            // literal `section.control` key alongside the nested one, and
+            // Arr::get checks the literal key first -- so the flat copy would
+            // shadow every later write made through Settings::set().
             if ( null !== $clean ) {
-                $stored[ $key ] = $clean;
+                Arr::set( $stored, $key, $clean );
             }
         }
 
