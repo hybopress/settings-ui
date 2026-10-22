@@ -19,6 +19,14 @@ use Hybrid\Tools\Arr;
  * previous callback's merged array and treat it as posted input.
  */
 final class Panel {
+    /**
+     * What sanitizeSubmission() last returned, so a second pass over its
+     * own result can be recognised.
+     *
+     * @var array<string, mixed>|null
+     */
+    private ?array $submitted = null;
+
     public function __construct(
         private readonly Settings $settings,
         private readonly Definitions $definitions,
@@ -39,9 +47,32 @@ final class Panel {
      */
     public function registerSetting(): void {
         register_setting( $this->option, $this->option, [
-            'sanitize_callback' => [ $this, 'sanitize' ],
+            'sanitize_callback' => [ $this, 'sanitizeSubmission' ],
             'type'              => 'array',
         ] );
+    }
+
+    /**
+     * The sanitize callback registerSetting() registers.
+     *
+     * register_setting() runs it on every update_option() for the option,
+     * not only on the form post. A write from code, Settings::set() among
+     * them, hands over the whole nested array, which holds none of the
+     * posted keys, so sanitize() would throw the write away. Core also runs
+     * it twice on an option's first save, because update_option() falls
+     * through to add_option(), and the second call receives the first one's
+     * result. Only this option's own form submission is input; anything
+     * else, and a result already produced, passes through untouched.
+     */
+    public function sanitizeSubmission( mixed $value ): mixed {
+        // options.php has checked the nonce and capability by now.
+        $page = isset( $_POST['option_page'] ) ? sanitize_text_field( wp_unslash( $_POST['option_page'] ) ) : '';
+
+        if ( $this->option !== $page || $value === $this->submitted ) {
+            return $value;
+        }
+
+        return $this->submitted = $this->sanitize( $value );
     }
 
     /**

@@ -2,6 +2,14 @@
 
 declare(strict_types = 1);
 
+use HBP\Settings\Features;
+use HBP\Settings\Meta\WordPressMeta;
+use HBP\Settings\Settings;
+use HBP\Settings\Store\OptionStore;
+use HBP\Settings\Ui\Definitions;
+use HBP\Settings\Ui\Fields;
+use HBP\Settings\Ui\Panel;
+
 /**
  * @return array<string, array<string, mixed>>
  */
@@ -309,3 +317,42 @@ it( 'passes a raw selector through untouched', function ( string $selector ): vo
     'class' => '.legacy-wrap',
     'id'    => '#thing',
 ] );
+
+it( 'keeps values written through Settings while the option is registered', function (): void {
+    $config   = child( [ 'controls' => [ 'site.title' => [ 'type' => 'text' ] ] ] );
+    $settings = new Settings( new OptionStore( TEST_OPTION ), $config, 'child', new WordPressMeta );
+    $panel    = new Panel( $settings, new Definitions( $config, 'child', new Features( $config, 'child' ) ), new Fields, TEST_OPTION );
+
+    $panel->registerSetting();
+
+    try {
+        $settings->set( 'site.title', 'From code' );
+        $settings->set( 'migrated.flag', 1 );
+        $settings->flush();
+
+        expect( $settings->get( 'site.title' ) )->toBe( 'From code' )
+            ->and( $settings->get( 'migrated.flag' ) )->toBe( 1 );
+    } finally {
+        unregister_setting( TEST_OPTION, TEST_OPTION );
+    }
+} );
+
+it( 'still sanitizes the settings form submission', function (): void {
+    $config   = child( [ 'controls' => [ 'site.title' => [ 'type' => 'text' ] ] ] );
+    $settings = new Settings( new OptionStore( TEST_OPTION ), $config, 'child', new WordPressMeta );
+    $panel    = new Panel( $settings, new Definitions( $config, 'child', new Features( $config, 'child' ) ), new Fields, TEST_OPTION );
+
+    $panel->registerSetting();
+    $_POST['option_page'] = TEST_OPTION;
+
+    try {
+        update_option( TEST_OPTION, [ 'site.title' => '<b>Posted</b>', 'undeclared' => 'x' ] );
+        $settings->flush();
+
+        expect( $settings->get( 'site.title' ) )->toBe( 'Posted' )
+            ->and( $settings->has( 'undeclared' ) )->toBeFalse();
+    } finally {
+        unset( $_POST['option_page'] );
+        unregister_setting( TEST_OPTION, TEST_OPTION );
+    }
+} );
