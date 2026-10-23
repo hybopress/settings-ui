@@ -1,0 +1,3 @@
+# Exclude from release archives.
+
+/qa export-ignore
